@@ -1,3 +1,3 @@
-char rom_data8[] = {
+char rom_data[] = {
     // put rom data here
 };
