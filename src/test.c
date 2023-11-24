@@ -38,40 +38,17 @@
 #include "vmgraph.h"
 #include "vmchset.h"
 #include "vmstdlib.h"
-#include "vmtimer.h"
 // #include "ResID.h"
 #include "vm4res.h"
-
-#define ENABLE_LCD 1
-#include "peanut_gb.h"
-
-#include "rom.h"
-
 /* ---------------------------------------------------------------------------
 * global variables
 * ------------------------------------------------------------------------ */
 
 /* define this macro if application support background running. */
-// #define		SUPPORT_BG		
+#define		SUPPORT_BG		
 
 
 VMINT		layer_hdl[1];	/* layer handle array. */
-
-struct gb_s *gb;
-VMINT16 filename_ucs2[32];
-VMFILE rom;
-VMUINT read_result, read_unused;
-
-VMUINT8 gray_level;
-vm_graphic_color color;
-
-int framecount;
-#define FRAMESKIP 9
-
-// const VMUINT palette[4] = {0x7FFF, 0x5294, 0x294A, 0x0000};
-vm_graphic_color palette[4];
-
-// VMUINT16 framebuf[144][160];
 
 /* ---------------------------------------------------------------------------
  * local variables
@@ -91,57 +68,10 @@ void handle_keyevt(VMINT event, VMINT keycode);
 */
 void handle_penevt(VMINT event, VMINT x, VMINT y);
 
-VMUINT8 gb_rom_read(struct gb_s *gb, const uint_fast32_t addr) {
-	// vm_file_seek(rom, addr, BASE_BEGIN);
-	// vm_file_read(rom, &read_result, 1, &read_unused);
-	// return read_result;
-	return rom_data[addr];
-}
-
-VMUINT8 gb_cart_ram_read(struct gb_s *gb, const uint_fast32_t addr) {}
-void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr, const uint8_t val) {}
-void gb_error(struct gb_s* gb, const enum gb_error_e err, const uint16_t addr) {}
-
-void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[160], const unsigned int line) {
-	if (framecount % FRAMESKIP) return;
-	for (int i = 0; i < 160; i++) {
-		// framebuf[line][i] = palette[pixels[i] & 3];
-		vm_graphic_setcolor(&palette[pixels[i] & 3]);
-		vm_graphic_set_pixel_ex(layer_hdl[0], i, line);
-	}
-}
-
-void draw_frame(VMINT tid) {
-	// color.vm_color_565 = VM_COLOR_BLACK;
-	// vm_graphic_setcolor(&color);
-	
-	// /* fill rect with screen color */
-	// vm_graphic_fill_rect_ex(layer_hdl[0], 0, 0, vm_graphic_get_screen_width(), vm_graphic_get_screen_height());
-
-	// char tick[32];
-	// VMSHORT tick_ucs2[64];
-
-	// color.vm_color_565 = VM_COLOR_RED;
-	// vm_graphic_setcolor(&color);
-	// sprintf(tick, "%d", vm_get_tick_count());
-	// vm_ascii_to_ucs2(tick_ucs2, 64, tick);
-	// vm_graphic_textout_to_layer(layer_hdl[0], 0, 160, tick_ucs2, 64);
-
-	// Run emulator for one frame
-	gb_run_frame(gb);
-	
-	// sprintf(tick, "%d", vm_get_tick_count());
-	// vm_ascii_to_ucs2(tick_ucs2, 64, tick);
-	// vm_graphic_textout_to_layer(layer_hdl[0], 0, 180, tick_ucs2, 64);
-
-	/* flush the screen with text data */
-	if (framecount % FRAMESKIP == 0) {
-		// vm_graphic_draw_image_from_memory(layer_hdl[0], 0, 0, (VMUINT8 *) framebuf, 46080);
-		vm_graphic_flush_layer(layer_hdl, 1);
-	}
-
-	framecount++;
-}
+/*
+* demo
+*/
+static void draw_hello(void);
 
 /*
 * entry
@@ -149,38 +79,65 @@ void draw_frame(VMINT tid) {
 void vm_main(void) {
 	/* initialize layer handle */
 	layer_hdl[0] = -1;	
-
-	// Init emulator
-	gb = malloc(sizeof (struct gb_s));
-	gb_init(gb, gb_rom_read, gb_cart_ram_read, gb_cart_ram_write, gb_error, NULL);
-	gb_init_lcd(gb, lcd_draw_line);
-
-	// Frameskip
-	// gb->direct.interlace = 1;
-
-	vm_switch_power_saving_mode(turn_off_mode);
-
-	// Open ROM file (gb_rom_read reads bytes from it as needed)
-	// vm_ascii_to_ucs2(filename_ucs2, 32, "e:\\mre\\rom.gb");
-	// vm_file_open(filename_ucs2, MODE_READ, 1);
 	
-	// Register MRE event handlers
+	/* register system events handler */
 	vm_reg_sysevt_callback(handle_sysevt);
+	
+	/* register keyboard events handler */
 	vm_reg_keyboard_callback(handle_keyevt);
+	
+	/* register pen events handler */
 	vm_reg_pen_callback(handle_penevt);
-	vm_create_timer(17, draw_frame);
-
-	// Init color array
-	palette[0].vm_color_565 = 0x7FFF;
-	palette[1].vm_color_565 = 0x5294;
-	palette[2].vm_color_565 = 0x294A;
-	palette[3].vm_color_565 = 0x0000;
 
 	/* Init MRE resource */
 	vm_res_init();
 }
 
 void handle_sysevt(VMINT message, VMINT param) {
+#ifdef		SUPPORT_BG	
+/* The application updates the screen when receiving the message VM_MSG_PAINT 
+*  what is sent after the application is activated. The application can skip 
+*  the process on screen when the VM_MSG_ACTIVE or VM_MSG_INACTIVE is received.
+	*/
+	switch (message) {
+	case VM_MSG_CREATE:	/* the message of creation of application */
+		/* the GDI operation is not recommended as the response of the message*/
+		break;
+	case VM_MSG_PAINT:	/* the message of asking for application to repaint screen */
+		/* cerate base layer that has same size as the screen*/
+		layer_hdl[0] = vm_graphic_create_layer(0, 0, 
+			vm_graphic_get_screen_width(),		/* get screen width */
+			vm_graphic_get_screen_height(),		/* get screen height */
+			-1);		/* -1 means layer or canvas have no transparent color */
+		
+		/* set clip area */
+		vm_graphic_set_clip(0, 0, 
+			vm_graphic_get_screen_width(), 
+			vm_graphic_get_screen_height());
+		
+		draw_hello();	/* draw hello world! */
+		break;
+	case VM_MSG_HIDE:	
+		/* message of application state from foreground running to background running */
+		if( layer_hdl[0] != -1 )
+		{
+			vm_graphic_delete_layer(layer_hdl[0]);
+			layer_hdl[0] = -1;
+		}
+		break;
+	case VM_MSG_QUIT:	/* the message of quit of application */
+		if( layer_hdl[0] != -1 )
+		{
+			vm_graphic_delete_layer(layer_hdl[0]);
+			layer_hdl[0] = -1;
+		}
+		
+		/* Release all resource */
+		vm_res_deinit();
+
+		break;
+	}
+#else
 	switch (message) {
 	case VM_MSG_CREATE:	/* the message of creation of application */
 	case VM_MSG_ACTIVE: /* the message of application state from inactive to active */
@@ -196,10 +153,9 @@ void handle_sysevt(VMINT message, VMINT param) {
 			vm_graphic_get_screen_height());
 		break;
 		
-	case VM_MSG_PAINT: {
-		// draw_frame(0);
+	case VM_MSG_PAINT:	/* the message of asking for application to repaint screen */
+		draw_hello();	/* draw hello world! */
 		break;
-	}
 		
 	case VM_MSG_INACTIVE:	/* the message of application state from active to inactive */
 		if( layer_hdl[0] != -1 )
@@ -214,40 +170,18 @@ void handle_sysevt(VMINT message, VMINT param) {
 		vm_res_deinit();
 		break;	
 	}
+#endif
 }
 
 void handle_keyevt(VMINT event, VMINT keycode) {
-	switch (event) {
-		case VM_KEY_EVENT_DOWN: case VM_KEY_EVENT_LONG_PRESS: case VM_KEY_EVENT_REPEAT: {
-			switch (keycode) {
-				case VM_KEY_UP: gb->direct.joypad_bits.up = 1; break;
-				case VM_KEY_LEFT: gb->direct.joypad_bits.left = 1; break;
-				case VM_KEY_DOWN: gb->direct.joypad_bits.down = 1; break;
-				case VM_KEY_RIGHT: gb->direct.joypad_bits.right = 1; break;
-				case VM_KEY_RIGHT_SOFTKEY: gb->direct.joypad_bits.a = 1; break;
-				case VM_KEY_LEFT_SOFTKEY: gb->direct.joypad_bits.b = 1; break;
-				case VM_KEY_STAR: gb->direct.joypad_bits.select = 1; break;
-				case VM_KEY_POUND: gb->direct.joypad_bits.start = 1; break;
-			}
-			break;
-		}
-
-		case VM_KEY_EVENT_UP: {
-			switch (keycode) {
-				case VM_KEY_UP: gb->direct.joypad_bits.up = 0; break;
-				case VM_KEY_LEFT: gb->direct.joypad_bits.left = 0; break;
-				case VM_KEY_DOWN: gb->direct.joypad_bits.down = 0; break;
-				case VM_KEY_RIGHT: gb->direct.joypad_bits.right = 0; break;
-				case VM_KEY_RIGHT_SOFTKEY: gb->direct.joypad_bits.a = 0; break;
-				case VM_KEY_LEFT_SOFTKEY: gb->direct.joypad_bits.b = 0; break;
-				case VM_KEY_STAR: gb->direct.joypad_bits.select = 0; break;
-				case VM_KEY_POUND: gb->direct.joypad_bits.start = 0; break;
-			}
-			break;
-		}
-
-		default: break;
+	/* press any key and return*/
+	if( layer_hdl[0] != -1 )
+	{
+		vm_graphic_delete_layer(layer_hdl[0]);
+		layer_hdl[0] = -1;
 	}
+	
+	vm_exit_app();		/* quit application */
 }
 
 void handle_penevt(VMINT event, VMINT x, VMINT y)
@@ -261,3 +195,37 @@ void handle_penevt(VMINT event, VMINT x, VMINT y)
 	
 	vm_exit_app();		/* quit application */
 }
+
+short s[] = {'H','e','l','l','o',',',' ','w','o','r','l','d','!',0};
+
+static void draw_hello(void) {
+	int x;						/* string's x coordinate */
+	int y;						/* string's y coordinate */
+	int wstr_len;				/* string's length */
+	vm_graphic_color color;		/* use to set screen and text color */
+	
+	/* calculate string length*/ 
+	wstr_len = vm_graphic_get_string_width(s);
+
+	/* calculate string's coordinate */
+	x = (vm_graphic_get_screen_width() - wstr_len) / 2;
+	y = (vm_graphic_get_screen_height() - vm_graphic_get_character_height()) / 2;
+	
+	/* set screen color */
+	color.vm_color_565 = VM_COLOR_WHITE;
+	vm_graphic_setcolor(&color);
+	
+	/* fill rect with screen color */
+	vm_graphic_fill_rect_ex(layer_hdl[0], 0, 0, vm_graphic_get_screen_width(), vm_graphic_get_screen_height());
+	
+	/* set text color */
+	color.vm_color_565 = VM_COLOR_BLUE;
+	vm_graphic_setcolor(&color);
+	
+	/* output text to layer */
+	vm_graphic_textout_to_layer(layer_hdl[0],x, y, s, wstr_len);
+	
+	/* flush the screen with text data */
+	vm_graphic_flush_layer(layer_hdl, 1);
+}
+
