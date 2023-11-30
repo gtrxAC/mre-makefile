@@ -4,14 +4,14 @@ Cross-platform build script for developing apps for [MediaTek MRE](https://lpcwi
 ## Status
 ### What works
 - Compiling a VXP file under Linux
-- Running a compiled VXP on Nokia Series 30+ and Alcatel 2005x
+- Running a compiled VXP on MRE 3.x phones
 
 ### What is untested
 - Compiling a VXP file under Windows
 
 ### What doesn't work
 - Compiling a VXP file under macOS
-- Running a compiled VXP on Doro PhoneEasy and most other devices
+- Running a compiled VXP on MRE <3.0 phones
 - Editing app metadata (tags)
 - Editing app resources - not planned unless absolutely required
 
