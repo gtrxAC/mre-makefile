@@ -4,10 +4,8 @@ Cross-platform build script for developing apps for [MediaTek MRE](https://lpcwi
 ## Status
 ### What works
 - Compiling a VXP file under Linux
-- Running a compiled VXP on MRE 3.x phones
-
-### What is untested
 - Compiling a VXP file under Windows
+- Running a compiled VXP on MRE 3.x phones
 
 ### What doesn't work
 - Compiling a VXP file under macOS
