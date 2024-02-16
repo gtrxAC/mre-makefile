@@ -6,11 +6,11 @@ Cross-platform build script for developing apps for [MediaTek MRE](https://lpcwi
 - Compiling a VXP file under Linux
 - Compiling a VXP file under Windows
 - Running a compiled VXP on MRE 3.x phones
+- Editing app metadata (tags) via JSON
 
 ### What doesn't work
 - Compiling a VXP file under macOS
 - Running a compiled VXP on MRE <3.0 phones
-- Editing app metadata (tags)
 - Editing app resources - not planned unless absolutely required
 
 ## Dependencies
@@ -21,7 +21,6 @@ On Windows, you can download and run [w64devkit](https://github.com/skeeto/w64de
 * ARM GCC
 
 ## How to use
-* `make setup` - sets up directory structure
 * `make` - compiles project and creates VXP in the project root folder
 * `make clean` - deletes any compilation data
 

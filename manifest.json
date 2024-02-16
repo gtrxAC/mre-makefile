@@ -1,0 +1,11 @@
+{
+    "name": "MyMREApp",
+    "vendor": "Vendor",
+    "app_name_multilang": ["NameEnglish", "NameChineseS", "NameChineseT"],
+    "description": "Example MRE application",
+    "version": 1,
+
+    "required_ram": 512,
+    "imsi": "1234567890",
+    "run_in_background": 0
+}
